@@ -44,9 +44,13 @@ import os
 import sys
 
 # ── ROS2 environment (needed even for OmniGraph bridge check binary) ─────────
-_EXT_PATH = os.path.expanduser(
-    "~/isaacsim/_build/linux-x86_64/release/exts/isaacsim.ros2.bridge"
+# ISAAC_SIM_ROOT é definido pelo Dockerfile (container) ou aponta para a
+# instalação local quando executado fora do Docker.
+_ISAAC_ROOT = os.environ.get(
+    "ISAAC_SIM_ROOT",
+    os.path.expanduser("~/isaacsim/_build/linux-x86_64/release"),
 )
+_EXT_PATH = os.path.join(_ISAAC_ROOT, "exts", "isaacsim.ros2.bridge")
 os.environ["LD_LIBRARY_PATH"] = (
     os.path.join(_EXT_PATH, "humble", "lib")
     + ":" + os.environ.get("LD_LIBRARY_PATH", "")
@@ -62,7 +66,9 @@ sys.path.insert(1, os.path.join(_EXT_PATH, "humble"))
 
 from isaacsim import SimulationApp
 
-simulation_app = SimulationApp({"headless": False})
+simulation_app = SimulationApp({
+    "headless": False
+})
 
 import omni.kit.app
 
@@ -78,7 +84,7 @@ from isaacsim.core.api import World
 from isaacsim.core.api.objects import VisualCuboid
 from isaacsim.core.utils.stage import add_reference_to_stage
 from isaacsim.sensors.camera import Camera
-from pxr import UsdPhysics
+from pxr import UsdGeom, Gf, UsdPhysics
 
 sys.path.append(os.path.dirname(__file__))
 from controller import RobotType, TrossenAIController
@@ -122,11 +128,11 @@ WXAI_ARM_DOF_INDICES = [0, 1, 2, 3, 4, 5]
 WXAI_GRIPPER_DOF_INDEX = 6
 WXAI_DEFAULT_DOF_POSITIONS = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.044, 0.044]
 
-# --- Interactive target cube ---
+# --- Target cube (static, on table, within reach) ---
 TARGET_SCENE_PATH = "/World/TargetCube"
-TARGET_INITIAL_POSITION = np.array([0.3, 0.0, 0.2])
-TARGET_INITIAL_ORIENTATION = np.array([1.0, 0.0, 0.0, 0.0])  # [w, x, y, z]
 TARGET_SIZE = 0.05
+TARGET_INITIAL_POSITION = np.array([0.3, 0.0, 0.025])
+TARGET_INITIAL_ORIENTATION = np.array([1.0, 0.0, 0.0, 0.0])  # [w, x, y, z]
 
 # --- Camera ---
 CAMERA_PRIM_PATH = "/World/env_camera"
@@ -207,15 +213,7 @@ def main():
     robot_prim = world.stage.GetPrimAtPath(ROBOT_SCENE_PATH)
     UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
 
-    robot = TrossenAIController(
-        robot_path=ROBOT_SCENE_PATH,
-        robot_type=RobotType.WXAI,
-        arm_dof_indices=WXAI_ARM_DOF_INDICES,
-        gripper_dof_index=WXAI_GRIPPER_DOF_INDEX,
-        default_dof_positions=WXAI_DEFAULT_DOF_POSITIONS,
-    )
-
-    target_cube = world.scene.add(
+    world.scene.add(
         VisualCuboid(
             prim_path=TARGET_SCENE_PATH,
             name="target_cube",
@@ -237,17 +235,27 @@ def main():
     world.reset()
     camera.initialize()
 
+    world.play()
+
+    for _ in range(3):
+        world.step(render=False)
+
+    robot = TrossenAIController(
+        robot_path=ROBOT_SCENE_PATH,
+        robot_type=RobotType.WXAI,
+        arm_dof_indices=WXAI_ARM_DOF_INDICES,
+        gripper_dof_index=WXAI_GRIPPER_DOF_INDEX,
+        default_dof_positions=WXAI_DEFAULT_DOF_POSITIONS,
+    )
+
     _setup_ros2_graph()
     render_product = rep.create.render_product(CAMERA_PRIM_PATH, CAMERA_RESOLUTION)
     _setup_camera_graph(render_product.path)
 
-    # Start the simulation — physics tensors only exist while playing
-    world.play()
-
     subs = "/wxai/joint_commands  /wxai/target_pose" if _rclpy_ok else "(rclpy unavailable)"
     print(
         "[INFO] ROS2 bridge active.\n"
-        "       → Drag the blue cube in the viewport to move the robot.\n"
+        "       → Robot holds its default pose; send commands via ROS2 to move it.\n"
         f"       Publishes (OmniGraph): /wxai/joint_states  /tf  /wxai/camera/image_raw\n"
         f"       Subscribes (rclpy):   {subs}"
     )
@@ -294,10 +302,7 @@ def main():
                 )
                 _ros2_node.latest_pose = None
                 continue
-
-        # Default: track the blue cube with differential IK
-        cube_pos, cube_ori = target_cube.get_world_pose()
-        robot.set_end_effector_pose(position=cube_pos, orientation=cube_ori)
+        # Robot stays in default pose until commanded via ROS2
 
     if _rclpy_ok and _ros2_node is not None:
         _ros2_node.destroy_node()
