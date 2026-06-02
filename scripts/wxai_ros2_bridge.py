@@ -78,6 +78,7 @@ from isaacsim.core.api import World
 from isaacsim.core.api.objects import VisualCuboid
 from isaacsim.core.utils.stage import add_reference_to_stage
 from isaacsim.sensors.camera import Camera
+from pxr import UsdPhysics
 
 sys.path.append(os.path.dirname(__file__))
 from controller import RobotType, TrossenAIController
@@ -202,6 +203,9 @@ def main():
     world = World(stage_units_in_meters=1.0)
     world.scene.add_default_ground_plane()
     add_reference_to_stage(usd_path=ROBOT_USD_PATH, prim_path=ROBOT_SCENE_PATH)
+
+    robot_prim = world.stage.GetPrimAtPath(ROBOT_SCENE_PATH)
+    UsdPhysics.ArticulationRootAPI.Apply(robot_prim)
 
     robot = TrossenAIController(
         robot_path=ROBOT_SCENE_PATH,
