@@ -1,0 +1,44 @@
+.git
+.gitignore
+.dockerignore
+
+# Imagens e documentação
+NGC_key.png
+README.md
+Guilherme.md
+Dockerfile.isaac
+docker-compose.yml
+setup_display.sh
+
+# Build artifacts
+**/cmake-build*/
+**/build*/
+**/*.so
+**/*.log*
+
+# Omniverse
+**/*.dmp
+**/.thumbs
+
+# Python
+.DS_Store
+**/*.egg-info/
+**/__pycache__/
+**/.pytest_cache/
+**/*.pyc
+**/*.pb
+
+# IDE
+**/.idea/
+**/.vscode/
+
+# Outputs
+**/output/*
+**/outputs/*
+**/videos/*
+**/wandb/*
+**/.neptune/*
+**/runs/*
+**/logs/*
+**/recordings/*
+*.tmp

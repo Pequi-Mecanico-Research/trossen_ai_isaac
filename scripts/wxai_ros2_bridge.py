@@ -50,24 +50,27 @@ _ISAAC_ROOT = os.environ.get(
     "ISAAC_SIM_ROOT",
     os.path.expanduser("~/isaacsim/_build/linux-x86_64/release"),
 )
+
+_ROS_DISTRO = os.environ.get("ROS_DISTRO", "jazzy")
+
 _EXT_PATH = os.path.join(_ISAAC_ROOT, "exts", "isaacsim.ros2.bridge")
 os.environ["LD_LIBRARY_PATH"] = (
-    os.path.join(_EXT_PATH, "humble", "lib")
+    os.path.join(_EXT_PATH, _ROS_DISTRO, "lib")
     + ":" + os.environ.get("LD_LIBRARY_PATH", "")
 )
-os.environ.setdefault("ROS_DISTRO", "humble")
+os.environ.setdefault("ROS_DISTRO", _ROS_DISTRO)
 os.environ.setdefault("RMW_IMPLEMENTATION", "rmw_fastrtps_cpp")
 
-# Strip Python 3.10 ROS2 paths; insert bundled Python 3.11 paths up front
-sys.path = [p for p in sys.path if "python3.10" not in p and "ros2_humble" not in p]
-sys.path.insert(0, os.path.join(_EXT_PATH, "humble", "rclpy"))
-sys.path.insert(1, os.path.join(_EXT_PATH, "humble"))
+# Strip paths from other distros; insert bundled paths up front
+sys.path = [p for p in sys.path if f"python3.10" not in p and "ros2_humble" not in p]
+sys.path.insert(0, os.path.join(_EXT_PATH, _ROS_DISTRO, "rclpy"))
+sys.path.insert(1, os.path.join(_EXT_PATH, _ROS_DISTRO))
 # ─────────────────────────────────────────────────────────────────────────────
 
 from isaacsim import SimulationApp
 
 simulation_app = SimulationApp({
-    "headless": False
+    "headless": False,
 })
 
 import omni.kit.app
@@ -122,7 +125,8 @@ except Exception as e:
 # ─────────────────────────────────────────────────────────────────────────────
 
 # --- Robot ---
-ROBOT_USD_PATH = "./assets/robots/wxai/wxai_base.usd"
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROBOT_USD_PATH = os.path.join(_REPO_ROOT, "assets", "robots", "wxai", "wxai_base.usd")
 ROBOT_SCENE_PATH = "/World/wxai_robot"
 WXAI_ARM_DOF_INDICES = [0, 1, 2, 3, 4, 5]
 WXAI_GRIPPER_DOF_INDEX = 6

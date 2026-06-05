@@ -1,0 +1,39 @@
+FROM nvcr.io/nvidia/isaac-sim:5.1.0
+
+USER root
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    libv4l-dev \
+    python3-pip \
+    libx11-xcb1 \
+    libfontenc1 \
+    libxfont2 \
+    x11-apps \
+    && rm -rf /var/lib/apt/lists/*
+
+
+ENV ROS_DISTRO=jazzy
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib:${LD_LIBRARY_PATH}
+
+RUN ln -s /isaac-sim/exts/isaacsim.ros2.bridge/jazzy/lib/libament_index_cpp.so /usr/lib/libament_index_cpp.so || true
+
+RUN /isaac-sim/python.sh -m pip install --no-cache-dir \
+    httpx \
+    json-numpy
+
+WORKDIR /workspace
+
+COPY --chown=1234:1234 . .
+
+ENV ISAAC_SIM_ROOT=/isaac-sim
+ENV ACCEPT_EULA=Y
+
+ENTRYPOINT []
+
+CMD ["/isaac-sim/python.sh", "scripts/wxai_ros2_bridge.py"]
+
+#CMD ["/isaac-sim/isaac-sim.sh"]

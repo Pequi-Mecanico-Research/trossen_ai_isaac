@@ -31,6 +31,7 @@ This repository contains NVIDIA Isaac Sim and Isaac Lab integration for Trossen 
 
 - [Overview](#overview)
 - [Installation](#installation)
+- [Docker](#docker)
 - [Robot Assets](#robot-assets)
 - [Isaac Sim Demo Scripts](#isaac-sim-demo-scripts)
 - [Isaac Lab Demo Tasks](#isaac-lab-demo-tasks)
@@ -77,6 +78,56 @@ You should see output similar to:
 | 8  | Isaac-Reach-WXAI-Play-v0       | isaaclab.envs:ManagerBasedRLEnv | trossen_ai_isaac.tasks.manager_based.manipulation.wxai.reach.config.joint_pos_env_cfg:WXAIReachEnvCfg_PLAY   |
 | 9  | Isaac-Reach-WXAI-IK-Rel-v0     | isaaclab.envs:ManagerBasedRLEnv | trossen_ai_isaac.tasks.manager_based.manipulation.wxai.reach.config.ik_rel_env_cfg:WXAIReachEnvCfg           |
 | 10 | Isaac-Reach-WXAI-IK-Abs-v0     | isaaclab.envs:ManagerBasedRLEnv | trossen_ai_isaac.tasks.manager_based.manipulation.wxai.reach.config.ik_abs_env_cfg:WXAIReachEnvCfg           |
+```
+
+---
+
+## Docker
+
+Running Isaac Sim via Docker allows you to use it without a local Isaac Sim installation.
+
+### Prerequisites
+
+**1. NVIDIA NGC Login**
+
+Create an account at [NVIDIA NGC](https://catalog.ngc.nvidia.com/) and generate an API key under **Profile → Account Settings → API Keys**. Then authenticate:
+
+```bash
+docker login nvcr.io -u '$oauthtoken' -p <YOUR_NGC_API_KEY>
+```
+
+### Setup (run once before the first launch)
+
+The script below creates the required cache directories and grants X11 display access to the container:
+
+```bash
+setup_display.sh
+```
+
+This script:
+- Creates `~/docker/isaac-sim/` subdirectories for cache, config, logs, and data
+- Sets ownership to user `1234:1234` (default Isaac Sim container user)
+- Runs `xhost +local:` to allow the container to connect to your display
+
+### Run with Docker
+
+```bash
+docker compose up --build 
+```
+
+The simulation will open as a GUI window on your desktop. On subsequent runs you only need to call `setup_display.sh` once per session (to refresh the `xhost` permission):
+
+```bash
+./scripts/setup_display.sh && docker compose up 
+```
+
+### Run scripts locally (without Docker)
+
+Activate the virtual environment and run scripts directly with Isaac Sim:
+
+```bash
+isaac-env
+isaacsim-python scripts/wxai_ros2_bridge.py
 ```
 
 ---
